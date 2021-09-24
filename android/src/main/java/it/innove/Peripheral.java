@@ -711,60 +711,7 @@ public class Peripheral extends BluetoothGattCallback {
 						writeCallback = callback;
 					}
 
-					if (data.length > maxByteSize) {
-						int dataLength = data.length;
-						int count = 0;
-						byte[] firstMessage = null;
-						List<byte[]> splittedMessage = new ArrayList<>();
-
-						while (count < dataLength && (dataLength - count > maxByteSize)) {
-							if (count == 0) {
-								firstMessage = Arrays.copyOfRange(data, count, count + maxByteSize);
-							} else {
-								byte[] splitMessage = Arrays.copyOfRange(data, count, count + maxByteSize);
-								splittedMessage.add(splitMessage);
-							}
-							count += maxByteSize;
-						}
-						if (count < dataLength) {
-							// Other bytes in queue
-							byte[] splitMessage = Arrays.copyOfRange(data, count, data.length);
-							splittedMessage.add(splitMessage);
-						}
-
-						if (BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT == writeType) {
-							writeQueue.addAll(splittedMessage);
-							if (!doWrite(characteristic, firstMessage)) {
-								writeQueue.clear();
-								writeCallback = null;
-								callback.invoke("Write failed");
-							}
-						} else {
-							try {
-								boolean writeError = false;
-								if (!doWrite(characteristic, firstMessage)) {
-									writeError = true;
-									callback.invoke("Write failed");
-								}
-								if (!writeError) {
-									Thread.sleep(queueSleepTime);
-									for (byte[] message : splittedMessage) {
-										if (!doWrite(characteristic, message)) {
-											writeError = true;
-											callback.invoke("Write failed");
-											break;
-										}
-										Thread.sleep(queueSleepTime);
-									}
-									if (!writeError) {
-										callback.invoke();
-									}
-								}
-							} catch (InterruptedException e) {
-								callback.invoke("Error during writing");
-							}
-						}
-					} else if (doWrite(characteristic, data)) {
+					if (doWrite(characteristic, data)) {
 						Log.d(BleManager.LOG_TAG, "Write completed");
 						if (BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE == writeType) {
 							callback.invoke();
